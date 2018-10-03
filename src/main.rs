@@ -104,7 +104,7 @@ impl EventHandler for MainState {
         }
     }
 
-    fn mouse_button_down_event(&mut self, ctx: &mut Context, button: MouseButton, x: i32, y: i32) {
+    fn mouse_button_down_event(&mut self, _ctx: &mut Context, button: MouseButton, x: i32, y: i32) {
         if button == MouseButton::Left {
             let pos_x = (x as f32 / SPACE_SIZE) as usize;
             let pos_y = (y as f32 / SPACE_SIZE) as usize;

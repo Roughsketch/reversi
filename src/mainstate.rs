@@ -64,7 +64,7 @@ impl MainState {
         }
 
         //  Check below
-        for new_y in (y + 1..crate::RANK) {
+        for new_y in y + 1..crate::RANK {
             let new_idx = crate::RANK * new_y + x;
 
             if self.board[new_idx] == Some(self.turn) {
@@ -115,7 +115,7 @@ impl MainState {
         flipped = false;
 
         //  Check right
-        for new_x in (x + 1..crate::RANK) {
+        for new_x in x + 1..crate::RANK {
             let new_idx = crate::RANK * y + new_x;
 
             if self.board[new_idx] == Some(self.turn) {
@@ -197,7 +197,6 @@ impl MainState {
                 flipped = true;
             }
         }
-        flipped = false;
 
         false
     }
@@ -209,12 +208,11 @@ impl MainState {
         let mut candidates = Vec::new();
 
         //  Check below
-        for new_y in (y + 1..crate::RANK) {
+        for new_y in y + 1..crate::RANK {
             let new_idx = crate::RANK * new_y + x;
 
             if self.board[new_idx] == Some(self.turn) {
                 captures.append(&mut candidates);
-                candidates.clear();
                 break;
             } else if self.board[new_idx].is_none() {
                 candidates.clear();
@@ -231,7 +229,6 @@ impl MainState {
 
             if self.board[new_idx] == Some(self.turn) {
                 captures.append(&mut candidates);
-                candidates.clear();
                 break;
             } else if self.board[new_idx].is_none() {
                 candidates.clear();
@@ -248,7 +245,6 @@ impl MainState {
 
             if self.board[new_idx] == Some(self.turn) {
                 captures.append(&mut candidates);
-                candidates.clear();
                 break;
             } else if self.board[new_idx].is_none() {
                 candidates.clear();
@@ -260,12 +256,11 @@ impl MainState {
         candidates.clear();
 
         //  Check right
-        for new_x in (x + 1..crate::RANK) {
+        for new_x in x + 1..crate::RANK {
             let new_idx = crate::RANK * y + new_x;
 
             if self.board[new_idx] == Some(self.turn) {
                 captures.append(&mut candidates);
-                candidates.clear();
                 break;
             } else if self.board[new_idx].is_none() {
                 candidates.clear();
@@ -282,7 +277,6 @@ impl MainState {
 
             if self.board[new_idx] == Some(self.turn) {
                 captures.append(&mut candidates);
-                candidates.clear();
                 break;
             } else if self.board[new_idx].is_none() {
                 candidates.clear();
@@ -299,7 +293,6 @@ impl MainState {
 
             if self.board[new_idx] == Some(self.turn) {
                 captures.append(&mut candidates);
-                candidates.clear();
                 break;
             } else if self.board[new_idx].is_none() {
                 candidates.clear();
@@ -316,7 +309,6 @@ impl MainState {
 
             if self.board[new_idx] == Some(self.turn) {
                 captures.append(&mut candidates);
-                candidates.clear();
                 break;
             } else if self.board[new_idx].is_none() {
                 candidates.clear();
@@ -333,7 +325,6 @@ impl MainState {
 
             if self.board[new_idx] == Some(self.turn) {
                 captures.append(&mut candidates);
-                candidates.clear();
                 break;
             } else if self.board[new_idx].is_none() {
                 candidates.clear();
@@ -365,12 +356,11 @@ impl MainState {
     }
 
     pub fn has_move(&self) -> bool {
-        for (index, piece) in self.board.iter().enumerate() {
-            let col = (index % crate::RANK) as f32;
-            let row = (index / crate::RANK) as f32;
-
-            if self.valid_space(col as usize, row as usize) {
-                return true
+        for x in 0..crate::RANK {
+            for y in 0..crate::RANK {
+                if self.valid_space(x, y) {
+                    return true
+                }
             }
         }
 
