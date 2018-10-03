@@ -46,6 +46,19 @@ impl MainState {
         })
     }
 
+    fn reset(&mut self) {
+        self.board = [None; BOARD_SIZE * BOARD_SIZE];
+        self.turn = Piece::White;
+        self.winner = None;
+
+        let idx = BOARD_SIZE / 2;
+
+        self.board[BOARD_SIZE * (idx - 1) + idx - 1] = Some(Piece::White);
+        self.board[BOARD_SIZE * (idx - 1) + idx] = Some(Piece::Black);
+        self.board[(BOARD_SIZE * idx) + idx - 1] = Some(Piece::Black);
+        self.board[(BOARD_SIZE * idx) + idx] = Some(Piece::White);
+    }
+
     fn valid_for(&self, player: Piece, x: usize, y: usize) -> bool {
         let mut flipped = false;
 
@@ -423,6 +436,7 @@ impl EventHandler for MainState {
     fn key_down_event(&mut self, ctx: &mut Context, keycode: Keycode, _keymod: Mod, _repeat: bool) {
         match keycode {
             Keycode::Escape => ctx.quit().unwrap(),
+            Keycode::R => self.reset(),
             _ => {}
         }
     }
