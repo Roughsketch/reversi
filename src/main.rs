@@ -54,6 +54,11 @@ impl MainState {
             return false;
         }
 
+        //  Last spot left is always valid
+        if self.board.into_iter().filter(|x| x.is_none()).count() == 1 {
+            return true;
+        }
+
         //  Check below
         for new_y in (y + 1..BOARD_SIZE) {
             let new_idx = BOARD_SIZE * new_y + x;
