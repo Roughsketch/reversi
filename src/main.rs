@@ -6,7 +6,7 @@ use ggez::graphics::{self, Color, DrawMode, Point2, Rect};
 const WINDOW_SIZE: f32 = 800.0;
 const SCALE: f32 = 4.0;
 const BOARD_SIZE: usize = 10;
-const SPACE_SIZE: f32 = WINDOW_SIZE / (BOARD_SIZE as f32 * SCALE);
+const SPACE_SIZE: f32 = WINDOW_SIZE / BOARD_SIZE as f32;
 const RADIUS: f32 = SPACE_SIZE / 3.0;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
