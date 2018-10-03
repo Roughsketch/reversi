@@ -211,21 +211,18 @@ impl MainState {
         false
     }
 
-    fn place(&mut self, x: usize, y: usize) {
+    fn captures(&self, x: usize, y: usize) -> Vec<usize> {
         //  List of positions to flip colors
-        let mut flips = Vec::new();
+        let mut captures = Vec::new();
         //  Storing potential flips while searching each direction
         let mut candidates = Vec::new();
-
-        let index = BOARD_SIZE * y + x;
-        self.board[index] = Some(self.turn);
 
         //  Check below
         for new_y in (y + 1..BOARD_SIZE) {
             let new_idx = BOARD_SIZE * new_y + x;
 
             if self.board[new_idx] == Some(self.turn) {
-                flips.append(&mut candidates);
+                captures.append(&mut candidates);
                 candidates.clear();
                 break;
             } else if self.board[new_idx].is_none() {
@@ -242,7 +239,7 @@ impl MainState {
             let new_idx = BOARD_SIZE * new_y + x;
 
             if self.board[new_idx] == Some(self.turn) {
-                flips.append(&mut candidates);
+                captures.append(&mut candidates);
                 candidates.clear();
                 break;
             } else if self.board[new_idx].is_none() {
@@ -259,7 +256,7 @@ impl MainState {
             let new_idx = BOARD_SIZE * y + new_x;
 
             if self.board[new_idx] == Some(self.turn) {
-                flips.append(&mut candidates);
+                captures.append(&mut candidates);
                 candidates.clear();
                 break;
             } else if self.board[new_idx].is_none() {
@@ -276,7 +273,7 @@ impl MainState {
             let new_idx = BOARD_SIZE * y + new_x;
 
             if self.board[new_idx] == Some(self.turn) {
-                flips.append(&mut candidates);
+                captures.append(&mut candidates);
                 candidates.clear();
                 break;
             } else if self.board[new_idx].is_none() {
@@ -293,7 +290,7 @@ impl MainState {
             let new_idx = BOARD_SIZE * new_y + new_x;
 
             if self.board[new_idx] == Some(self.turn) {
-                flips.append(&mut candidates);
+                captures.append(&mut candidates);
                 candidates.clear();
                 break;
             } else if self.board[new_idx].is_none() {
@@ -310,7 +307,7 @@ impl MainState {
             let new_idx = BOARD_SIZE * new_y + new_x;
 
             if self.board[new_idx] == Some(self.turn) {
-                flips.append(&mut candidates);
+                captures.append(&mut candidates);
                 candidates.clear();
                 break;
             } else if self.board[new_idx].is_none() {
@@ -327,7 +324,7 @@ impl MainState {
             let new_idx = BOARD_SIZE * new_y + new_x;
 
             if self.board[new_idx] == Some(self.turn) {
-                flips.append(&mut candidates);
+                captures.append(&mut candidates);
                 candidates.clear();
                 break;
             } else if self.board[new_idx].is_none() {
@@ -344,7 +341,7 @@ impl MainState {
             let new_idx = BOARD_SIZE * new_y + new_x;
 
             if self.board[new_idx] == Some(self.turn) {
-                flips.append(&mut candidates);
+                captures.append(&mut candidates);
                 candidates.clear();
                 break;
             } else if self.board[new_idx].is_none() {
@@ -354,9 +351,14 @@ impl MainState {
                 candidates.push(new_idx);
             }
         }
-        candidates.clear();
+        
+        captures
+    }
 
-        for index in flips.iter() {
+    fn place(&mut self, x: usize, y: usize) {
+        self.board[BOARD_SIZE * y + x] = Some(self.turn);
+
+        for index in self.captures(x, y).iter() {
             self.board[*index] = Some(self.turn);
         }
 
@@ -391,6 +393,7 @@ impl EventHandler for MainState {
         graphics::clear(ctx);
         
         let mut color_flag = false;
+        let mut best_spot = None;
 
         for (index, piece) in self.board.iter().enumerate() {
             let col = (index % BOARD_SIZE) as f32;
@@ -402,6 +405,10 @@ impl EventHandler for MainState {
 
             if self.valid_for(self.turn, col as usize, row as usize) {
                 graphics::set_color(ctx, Color::from((255, 19, 22)))?;
+                let total = self.captures(col as usize, row as usize).len();
+                if best_spot.is_none() || total > best_spot.unwrap_or(0) {
+                    best_spot = Some(index);
+                }
             } else if color_flag {
                 graphics::set_color(ctx, Color::from((158, 19, 22)))?;
             } else {
@@ -427,6 +434,17 @@ impl EventHandler for MainState {
                     RADIUS,
                     0.0001)?;
             }
+        }
+
+        graphics::set_color(ctx, Color::from((0, 255, 0)))?;
+        
+        if let Some(best) = best_spot {
+            graphics::rectangle(ctx,
+                DrawMode::Fill,
+                Rect::new((best % BOARD_SIZE) as f32 * SPACE_SIZE,
+                    (best / BOARD_SIZE) as f32 * SPACE_SIZE,
+                    SPACE_SIZE,
+                    SPACE_SIZE))?;
         }
 
         graphics::present(ctx);
