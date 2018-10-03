@@ -418,7 +418,6 @@ impl EventHandler for MainState {
     fn key_down_event(&mut self, ctx: &mut Context, keycode: Keycode, _keymod: Mod, _repeat: bool) {
         match keycode {
             Keycode::Escape => ctx.quit().unwrap(),
-            Keycode::A => self.board[5] = Some(Piece::White),
             _ => {}
         }
     }
