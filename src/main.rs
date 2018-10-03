@@ -3,9 +3,10 @@ use ggez::conf;
 use ggez::event::{self, EventHandler, Keycode, Mod, MouseButton};
 use ggez::graphics::{self, Color, DrawMode, Point2, Rect};
 
+const WINDOW_SIZE: f32 = 800.0;
 const SCALE: f32 = 4.0;
-const BOARD_SIZE: usize = 4;
-const SPACE_SIZE: f32 = 30.0 * SCALE;
+const BOARD_SIZE: usize = 10;
+const SPACE_SIZE: f32 = WINDOW_SIZE / (BOARD_SIZE as f32 * SCALE);
 const RADIUS: f32 = SPACE_SIZE / 3.0;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -14,10 +15,17 @@ enum Piece {
     White,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum Winner {
+    Black,
+    White,
+    Tie,
+}
+
 struct MainState {
     board: [Option<Piece>; BOARD_SIZE * BOARD_SIZE],
     turn: Piece,
-    winner: Option<Piece>,
+    winner: Option<Winner>,
 }
 
 impl MainState {
@@ -30,15 +38,334 @@ impl MainState {
         board[BOARD_SIZE * (idx - 1) + idx] = Some(Piece::Black);
         board[(BOARD_SIZE * idx) + idx - 1] = Some(Piece::Black);
         board[(BOARD_SIZE * idx) + idx] = Some(Piece::White);
+
         Ok(Self {
             board,
             turn: Piece::White,
+            winner: None,
         })
+    }
+
+    fn valid_for(&self, player: Piece, x: usize, y: usize) -> bool {
+        let mut flipped = false;
+
+        //  If spot isn't empty, then you can't place it
+        if !self.board[BOARD_SIZE * y + x].is_none() {
+            return false;
+        }
+
+        //  Check below
+        for new_y in (y + 1..BOARD_SIZE) {
+            let new_idx = BOARD_SIZE * new_y + x;
+
+            if self.board[new_idx] == Some(player) {
+                if flipped {
+                    return true
+                }
+                break;
+            } else if self.board[new_idx].is_none() {
+                break;
+            } else {
+                flipped = true;
+            }
+        }
+        flipped = false;
+
+        //  Check above
+        for new_y in (0..y).rev() {
+            let new_idx = BOARD_SIZE * new_y + x;
+
+            if self.board[new_idx] == Some(player) {
+                if flipped {
+                    return true
+                }
+                break;
+            } else if self.board[new_idx].is_none() {
+                break;
+            } else {
+                flipped = true;
+            }
+        }
+        flipped = false;
+
+        //  Check left
+        for new_x in (0..x).rev() {
+            let new_idx = BOARD_SIZE * y + new_x;
+
+            if self.board[new_idx] == Some(player) {
+                if flipped {
+                    return true
+                }
+                break;
+            } else if self.board[new_idx].is_none() {
+                break;
+            } else {
+                flipped = true;
+            }
+        }
+        flipped = false;
+
+        //  Check right
+        for new_x in (x + 1..BOARD_SIZE) {
+            let new_idx = BOARD_SIZE * y + new_x;
+
+            if self.board[new_idx] == Some(player) {
+                if flipped {
+                    return true
+                }
+                break;
+            } else if self.board[new_idx].is_none() {
+                break;
+            } else {
+                flipped = true;
+            }
+        }
+        flipped = false;
+
+        //  Check diagonal down right
+        for (new_x, new_y) in (x + 1..BOARD_SIZE).zip(y + 1..BOARD_SIZE) {
+            let new_idx = BOARD_SIZE * new_y + new_x;
+
+            if self.board[new_idx] == Some(player) {
+                if flipped {
+                    return true
+                }
+                break;
+            } else if self.board[new_idx].is_none() {
+                break;
+            } else {
+                flipped = true;
+            }
+        }
+        flipped = false;
+
+        //  Check diagonal up right
+        for (new_x, new_y) in (x + 1..BOARD_SIZE).zip((0..y).rev()) {
+            let new_idx = BOARD_SIZE * new_y + new_x;
+
+            if self.board[new_idx] == Some(player) {
+                if flipped {
+                    return true
+                }
+                break;
+            } else if self.board[new_idx].is_none() {
+                break;
+            } else {
+                flipped = true;
+            }
+        }
+        flipped = false;
+
+        //  Check diagonal down right
+        for (new_x, new_y) in (0..x).rev().zip(y + 1..BOARD_SIZE) {
+            let new_idx = BOARD_SIZE * new_y + new_x;
+
+            if self.board[new_idx] == Some(player) {
+                if flipped {
+                    return true
+                }
+                break;
+            } else if self.board[new_idx].is_none() {
+                break;
+            } else {
+                flipped = true;
+            }
+        }
+        flipped = false;
+
+        //  Check diagonal up right
+        for (new_x, new_y) in (0..x).rev().zip((0..y).rev()) {
+            let new_idx = BOARD_SIZE * new_y + new_x;
+
+            if self.board[new_idx] == Some(player) {
+                if flipped {
+                    return true
+                }
+                break;
+            } else if self.board[new_idx].is_none() {
+                break;
+            } else {
+                flipped = true;
+            }
+        }
+        flipped = false;
+
+        false
+    }
+
+    fn place(&mut self, x: usize, y: usize) {
+        //  List of positions to flip colors
+        let mut flips = Vec::new();
+        //  Storing potential flips while searching each direction
+        let mut candidates = Vec::new();
+
+        let index = BOARD_SIZE * y + x;
+        self.board[index] = Some(self.turn);
+
+        //  Check below
+        for new_y in (y + 1..BOARD_SIZE) {
+            let new_idx = BOARD_SIZE * new_y + x;
+
+            if self.board[new_idx] == Some(self.turn) {
+                flips.append(&mut candidates);
+                candidates.clear();
+                break;
+            } else if self.board[new_idx].is_none() {
+                candidates.clear();
+                break;
+            } else {
+                candidates.push(new_idx);
+            }
+        }
+        candidates.clear();
+
+        //  Check above
+        for new_y in (0..y).rev() {
+            let new_idx = BOARD_SIZE * new_y + x;
+
+            if self.board[new_idx] == Some(self.turn) {
+                flips.append(&mut candidates);
+                candidates.clear();
+                break;
+            } else if self.board[new_idx].is_none() {
+                candidates.clear();
+                break;
+            } else {
+                candidates.push(new_idx);
+            }
+        }
+        candidates.clear();
+
+        //  Check left
+        for new_x in (0..x).rev() {
+            let new_idx = BOARD_SIZE * y + new_x;
+
+            if self.board[new_idx] == Some(self.turn) {
+                flips.append(&mut candidates);
+                candidates.clear();
+                break;
+            } else if self.board[new_idx].is_none() {
+                candidates.clear();
+                break;
+            } else {
+                candidates.push(new_idx);
+            }
+        }
+        candidates.clear();
+
+        //  Check right
+        for new_x in (x + 1..BOARD_SIZE) {
+            let new_idx = BOARD_SIZE * y + new_x;
+
+            if self.board[new_idx] == Some(self.turn) {
+                flips.append(&mut candidates);
+                candidates.clear();
+                break;
+            } else if self.board[new_idx].is_none() {
+                candidates.clear();
+                break;
+            } else {
+                candidates.push(new_idx);
+            }
+        }
+        candidates.clear();
+
+        //  Check diagonal down right
+        for (new_x, new_y) in (x + 1..BOARD_SIZE).zip(y + 1..BOARD_SIZE) {
+            let new_idx = BOARD_SIZE * new_y + new_x;
+
+            if self.board[new_idx] == Some(self.turn) {
+                flips.append(&mut candidates);
+                candidates.clear();
+                break;
+            } else if self.board[new_idx].is_none() {
+                candidates.clear();
+                break;
+            } else {
+                candidates.push(new_idx);
+            }
+        }
+        candidates.clear();
+
+        //  Check diagonal up right
+        for (new_x, new_y) in (x + 1..BOARD_SIZE).zip((0..y).rev()) {
+            let new_idx = BOARD_SIZE * new_y + new_x;
+
+            if self.board[new_idx] == Some(self.turn) {
+                flips.append(&mut candidates);
+                candidates.clear();
+                break;
+            } else if self.board[new_idx].is_none() {
+                candidates.clear();
+                break;
+            } else {
+                candidates.push(new_idx);
+            }
+        }
+        candidates.clear();
+
+        //  Check diagonal down right
+        for (new_x, new_y) in (0..x).rev().zip(y + 1..BOARD_SIZE) {
+            let new_idx = BOARD_SIZE * new_y + new_x;
+
+            if self.board[new_idx] == Some(self.turn) {
+                flips.append(&mut candidates);
+                candidates.clear();
+                break;
+            } else if self.board[new_idx].is_none() {
+                candidates.clear();
+                break;
+            } else {
+                candidates.push(new_idx);
+            }
+        }
+        candidates.clear();
+
+        //  Check diagonal up right
+        for (new_x, new_y) in (0..x).rev().zip((0..y).rev()) {
+            let new_idx = BOARD_SIZE * new_y + new_x;
+
+            if self.board[new_idx] == Some(self.turn) {
+                flips.append(&mut candidates);
+                candidates.clear();
+                break;
+            } else if self.board[new_idx].is_none() {
+                candidates.clear();
+                break;
+            } else {
+                candidates.push(new_idx);
+            }
+        }
+        candidates.clear();
+
+        for index in flips.iter() {
+            self.board[*index] = Some(self.turn);
+        }
+
+        if self.turn == Piece::White {
+            self.turn = Piece::Black;
+        } else {
+            self.turn = Piece::White;
+        }
     }
 }
 
 impl EventHandler for MainState {
     fn update(&mut self, _ctx: &mut Context) -> GameResult<()> {
+        if !self.board.iter().any(Option::is_none) {
+            let white = self.board.iter().filter(|&x| *x == Some(Piece::White)).count();
+            let black = BOARD_SIZE * BOARD_SIZE - white;
+
+            if black > white {
+                self.winner = Some(Winner::Black);
+            } else if white > black {
+                self.winner = Some(Winner::White);
+            } else {
+                self.winner = Some(Winner::Tie);
+            }
+        } else {
+
+        }
         Ok(())
     }
 
@@ -55,7 +382,9 @@ impl EventHandler for MainState {
                 color_flag = !color_flag;
             }
 
-            if color_flag {
+            if self.valid_for(self.turn, col as usize, row as usize) {
+                graphics::set_color(ctx, Color::from((255, 19, 22)))?;
+            } else if color_flag {
                 graphics::set_color(ctx, Color::from((158, 19, 22)))?;
             } else {
                 graphics::set_color(ctx, Color::from((59, 122, 87)))?;
@@ -98,16 +427,9 @@ impl EventHandler for MainState {
         if button == MouseButton::Left {
             let pos_x = (x as f32 / SPACE_SIZE) as usize;
             let pos_y = (y as f32 / SPACE_SIZE) as usize;
-            let index = BOARD_SIZE * pos_y + pos_x;
 
-            println!("Pos: {} {} - {}", pos_x, pos_y, index);
-
-            self.board[index] = Some(self.turn);
-
-            if self.turn == Piece::White {
-                self.turn = Piece::Black;
-            } else {
-                self.turn = Piece::White;
+            if self.valid_for(self.turn, pos_x, pos_y) {
+                self.place(pos_x, pos_y);
             }
         }
     }

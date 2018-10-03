@@ -14,3 +14,6 @@
 **/*.rs.bk
 
 *.lock
+SDL2-2.0.5/
+msvc/
+gnu-mingw
