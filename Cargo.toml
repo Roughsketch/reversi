@@ -6,5 +6,6 @@ edition = "2018"
 
 [dependencies]
 ggez = "0.4"
+parking_lot = "0.6"
 rand = "0.5"
 rayon = "1.0"

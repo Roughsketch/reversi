@@ -1,25 +1,34 @@
 use ggez::{Context, GameResult};
 use ggez::conf;
 use ggez::event::{self, EventHandler, Keycode, Mod, MouseButton};
-use ggez::graphics::{self, Color, DrawMode, DrawParam, Mesh, Point2, Rect};
+use ggez::graphics::{self, Color, DrawMode, DrawParam, Font, MeshBuilder, Point2, Text};
+use ggez::timer;
+use parking_lot::RwLock;
 use rayon::prelude::*;
 
+use std::sync::Arc;
+
 /// The target window size width/height wise.
-const WINDOW_SIZE: f32 = 800.0;
+const WINDOW_SIZE: f32 = 400.0;
 /// The rank of the board, or how many squares make up a side.
-const RANK: usize = 100;
+const RANK: usize = 50;
 /// The size of a single square on the board.
 const SPACE_SIZE: f32 = WINDOW_SIZE / RANK as f32;
 /// The radius of a player's piece.
 const RADIUS: f32 = SPACE_SIZE / 3.0;
 
 mod mainstate;
-use self::mainstate::{MainState, Piece};
+use self::mainstate::{MainState, Piece, Winner};
 
 impl EventHandler for MainState {
     fn update(&mut self, _ctx: &mut Context) -> GameResult<()> {
-        if !self.board.par_iter().any(Option::is_none) {
+        if self.turns == RANK * RANK {
             if self.is_auto() {
+                match self.check_winner() {
+                    Winner::White => println!("White wins"),
+                    Winner::Black => println!("Black wins"),
+                    Winner::Tie => println!("Tie"),
+                }
                 self.reset();
             }
 
@@ -31,18 +40,30 @@ impl EventHandler for MainState {
                 self.valid_space(index % RANK, index / RANK)
             }).collect::<Vec<usize>>();
 
-            let choice = rand::sample(&mut rng, candidates, 1);
+            if let Ok(choice) = rand::seq::sample_iter(&mut rng, candidates, 1) {
+                if choice.len() > 0 {
+                    let index = choice[0];
+                    self.place(index % RANK, index / RANK);
+                } else {
+                    self.next_turn();
 
-            if choice.len() > 0 {
-                let index = choice[0];
-                self.place(index % RANK, index / RANK);
-            } else {
-                self.next_turn();
-
-                //  If neither side has a valid move, then end the game
-                if !self.has_move() {
-                    self.reset();
+                    //  If neither side has a valid move, then end the game
+                    if !self.has_move() {
+                        match self.check_winner() {
+                            Winner::White => println!("White wins"),
+                            Winner::Black => println!("Black wins"),
+                            Winner::Tie => println!("Tie"),
+                        }
+                        self.reset();
+                    }
                 }
+            } else {
+                match self.check_winner() {
+                    Winner::White => println!("White wins"),
+                    Winner::Black => println!("Black wins"),
+                    Winner::Tie => println!("Tie"),
+                }
+                self.reset();
             }
         } else {
             //  If no valid move can be made, they forfeit their turn
@@ -55,89 +76,103 @@ impl EventHandler for MainState {
                 self.check_winner();
             }
         }
+        
         Ok(())
     }
 
     fn draw(&mut self, ctx: &mut Context) -> GameResult<()> {
-        let start = std::time::Instant::now();
-
         graphics::clear(ctx);
         
-        let mut color_flag = false;
         //  Keep track of which index has the spot with the most captures
-        let mut best_spot = None;
+        // let valid = (0..RANK*RANK).into_par_iter()
+        //     .filter(|x| self.valid_space(x % RANK, x / RANK))
+        //     .collect::<Vec<usize>>();
 
-        let valid = (0..RANK*RANK).into_par_iter()
-            .filter(|x| self.valid_space(x % RANK, x / RANK))
-            .collect::<Vec<usize>>();
+        // let best_spot = valid.par_iter()
+        //     .map(|x| (x, self.captures(x % RANK, x / RANK).len()))
+        //     .max_by(|&(_, a), &(_, b)| a.cmp(&b))
+        //     .map(|(i, _)| Some(*i))
+        //     .take().unwrap_or(None);
 
-        let caps = valid.par_iter()
-            .map(|x| self.captures(x % RANK, x / RANK))
-            .collect::<Vec<Vec<usize>>();
+        // valid.iter().for_each(|&index| {
+        //     let col = (index % RANK) as f32;
+        //     let row = (index / RANK) as f32;
 
-        for col in 0..RANK {
-            color_flag = !color_flag;
+        //     graphics::draw_ex(ctx, &self.rect,
+        //         DrawParam {
+        //             dest: Point2::new(col as f32 * SPACE_SIZE, row as f32 * SPACE_SIZE),
+        //             color: Some(Color::from((255, 19, 22))),
+        //             .. Default::default()
+        //         });
+        // });
 
-            for row in 0..RANK {
-                let rect_color = if valid.contains(&(row * RANK + col)) {
-                    let total = self.captures(col, row).len();
-                    if best_spot.is_none() || total > best_spot.unwrap_or(0) {
-                        best_spot = Some(row * RANK + col);
-                    }
-                    Some(Color::from((255, 19, 22)))
-                } else if color_flag {
-                    Some(Color::from((158, 19, 22)))
+        graphics::draw_ex(ctx, &self.grid,
+            DrawParam {
+                color: Some(Color::from((158, 19, 22))),
+                .. Default::default()
+            })?;
+        let black = Arc::new(RwLock::new(MeshBuilder::new()));
+        let white = Arc::new(RwLock::new(MeshBuilder::new()));
+
+        self.board
+            .par_iter()
+            .enumerate()
+            .filter_map(|(i, &x)| {
+                if let Some(piece) = x {
+                    Some((i, piece))
                 } else {
                     None
-                };
-
-                color_flag = !color_flag;
-
-                if rect_color.is_some() {
-                    graphics::draw_ex(ctx, &self.rect,
-                        DrawParam {
-                            dest: Point2::new(col as f32 * SPACE_SIZE, row as f32 * SPACE_SIZE),
-                            color: rect_color,
-                            .. Default::default()
-                        })?;
                 }
-            }
-        }
-        println!("r{:?}", start.elapsed());
+            }).for_each(|(index, piece)| {
+                let col = (index % RANK) as f32;
+                let row = (index / RANK) as f32;
 
-        for (index, piece) in self.board.iter().enumerate() {
-            let col = (index % RANK) as f32;
-            let row = (index / RANK) as f32;
-
-            if let Some(p) = piece {
-                let player_color = if *p == Piece::Black {
-                    graphics::BLACK
+                if piece == Piece::Black {
+                    black.write().circle(DrawMode::Fill, 
+                        Point2::new(col * SPACE_SIZE + SPACE_SIZE / 2.0, row * SPACE_SIZE + SPACE_SIZE / 2.0),
+                        RADIUS,
+                        100.0);
                 } else {
-                    graphics::WHITE
-                };
+                    white.write().circle(DrawMode::Fill, 
+                        Point2::new(col * SPACE_SIZE + SPACE_SIZE / 2.0, row * SPACE_SIZE + SPACE_SIZE / 2.0),
+                        RADIUS,
+                        100.0);
+                }
+        });
 
-                graphics::draw_ex(ctx, &self.circle,
-                    DrawParam {
-                        dest: Point2::new(col * SPACE_SIZE + SPACE_SIZE / 2.0, row * SPACE_SIZE + SPACE_SIZE / 2.0),
-                        color: Some(player_color),
-                        .. Default::default()
-                    })?;
-                        
-            }
-        }
+        let black = black.read().build(ctx)?;
+        let white = white.read().build(ctx)?;
+
+        graphics::draw_ex(ctx, &black,
+            DrawParam {
+                color: Some(graphics::BLACK),
+                .. Default::default()
+            })?;
+
+        graphics::draw_ex(ctx, &white,
+            DrawParam {
+                color: Some(graphics::WHITE),
+                .. Default::default()
+            })?;
+
+        let text = Text::new(ctx, &format!("{}", timer::get_fps(ctx) as u32), &Font::default_font()?)?;
         
-        if let Some(best) = best_spot {
-            graphics::draw_ex(ctx, &self.rect,
-                DrawParam {
-                    dest: Point2::new((best % RANK) as f32 * SPACE_SIZE, (best / RANK) as f32 * SPACE_SIZE),
-                    color: Some(Color::from((0, 255, 0))),
-                    .. Default::default()
-                })?;
-        }
+        graphics::draw_ex(ctx, &text,
+            DrawParam {
+                color: Some(Color::from((0, 255, 0))),
+                .. Default::default()
+            })?;
+        // if let Some(best) = best_spot {
+        //     graphics::draw_ex(ctx, &self.rect,
+        //         DrawParam {
+        //             dest: Point2::new((best % RANK) as f32 * SPACE_SIZE, (best / RANK) as f32 * SPACE_SIZE),
+        //             color: Some(Color::from((0, 255, 0))),
+        //             .. Default::default()
+        //         })?;
+        // }
 
         graphics::present(ctx);
 
-        println!("{:?}", start.elapsed());
         Ok(())
     }
 
@@ -174,6 +209,7 @@ fn main() {
     let mut config = conf::Conf::new();
     config.window_mode.width = size;
     config.window_mode.height = size;
+    config.window_mode.vsync = false;
 
     let ctx = &mut Context::load_from_conf("Reversi", "Roughsketch", config).unwrap();
 
