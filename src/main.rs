@@ -67,13 +67,19 @@ impl EventHandler for MainState {
         //  Keep track of which index has the spot with the most captures
         let mut best_spot = None;
 
-        for col in 0..RANK {
-            for row in 0..RANK {
-                if col == 0 {
-                    color_flag = !color_flag;
-                }
+        let valid = (0..RANK*RANK).into_par_iter()
+            .filter(|x| self.valid_space(x % RANK, x / RANK))
+            .collect::<Vec<usize>>();
 
-                let rect_color = if self.valid_space(col, row) {
+        let caps = valid.par_iter()
+            .map(|x| self.captures(x % RANK, x / RANK))
+            .collect::<Vec<Vec<usize>>();
+
+        for col in 0..RANK {
+            color_flag = !color_flag;
+
+            for row in 0..RANK {
+                let rect_color = if valid.contains(&(row * RANK + col)) {
                     let total = self.captures(col, row).len();
                     if best_spot.is_none() || total > best_spot.unwrap_or(0) {
                         best_spot = Some(row * RANK + col);
