@@ -6,3 +6,5 @@ edition = "2018"
 
 [dependencies]
 ggez = "0.4"
+rand = "0.5"
+rayon = "1.0"
