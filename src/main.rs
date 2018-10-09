@@ -23,16 +23,15 @@ use self::mainstate::{MainState, Piece, Winner};
 impl EventHandler for MainState {
     fn update(&mut self, _ctx: &mut Context) -> GameResult<()> {
         if self.turns == RANK * RANK {
-            if self.is_auto() {
-                match self.check_winner() {
-                    Winner::White => println!("White wins"),
-                    Winner::Black => println!("Black wins"),
-                    Winner::Tie => println!("Tie"),
-                }
-                self.reset();
+            match self.check_winner() {
+                Winner::White => println!("White wins"),
+                Winner::Black => println!("Black wins"),
+                Winner::Tie => println!("Tie"),
             }
 
-            self.check_winner();
+            if self.is_auto() {
+                self.reset();
+            }
         } else if self.is_auto() {
             let mut rng = rand::thread_rng();
 
@@ -82,35 +81,13 @@ impl EventHandler for MainState {
 
     fn draw(&mut self, ctx: &mut Context) -> GameResult<()> {
         graphics::clear(ctx);
-        
-        //  Keep track of which index has the spot with the most captures
-        // let valid = (0..RANK*RANK).into_par_iter()
-        //     .filter(|x| self.valid_space(x % RANK, x / RANK))
-        //     .collect::<Vec<usize>>();
-
-        // let best_spot = valid.par_iter()
-        //     .map(|x| (x, self.captures(x % RANK, x / RANK).len()))
-        //     .max_by(|&(_, a), &(_, b)| a.cmp(&b))
-        //     .map(|(i, _)| Some(*i))
-        //     .take().unwrap_or(None);
-
-        // valid.iter().for_each(|&index| {
-        //     let col = (index % RANK) as f32;
-        //     let row = (index / RANK) as f32;
-
-        //     graphics::draw_ex(ctx, &self.rect,
-        //         DrawParam {
-        //             dest: Point2::new(col as f32 * SPACE_SIZE, row as f32 * SPACE_SIZE),
-        //             color: Some(Color::from((255, 19, 22))),
-        //             .. Default::default()
-        //         });
-        // });
 
         graphics::draw_ex(ctx, &self.grid,
             DrawParam {
                 color: Some(Color::from((158, 19, 22))),
                 .. Default::default()
             })?;
+
         let black = Arc::new(RwLock::new(MeshBuilder::new()));
         let white = Arc::new(RwLock::new(MeshBuilder::new()));
 
@@ -162,14 +139,6 @@ impl EventHandler for MainState {
                 color: Some(Color::from((0, 255, 0))),
                 .. Default::default()
             })?;
-        // if let Some(best) = best_spot {
-        //     graphics::draw_ex(ctx, &self.rect,
-        //         DrawParam {
-        //             dest: Point2::new((best % RANK) as f32 * SPACE_SIZE, (best / RANK) as f32 * SPACE_SIZE),
-        //             color: Some(Color::from((0, 255, 0))),
-        //             .. Default::default()
-        //         })?;
-        // }
 
         graphics::present(ctx);
 
