@@ -69,7 +69,7 @@ impl MainState {
 
             if self.board[new_idx] == Some(self.turn) {
                 if flipped {
-                    return true
+                    return true;
                 }
                 break;
             } else if self.board[new_idx].is_none() {
@@ -86,7 +86,7 @@ impl MainState {
 
             if self.board[new_idx] == Some(self.turn) {
                 if flipped {
-                    return true
+                    return true;
                 }
                 break;
             } else if self.board[new_idx].is_none() {
@@ -103,7 +103,7 @@ impl MainState {
 
             if self.board[new_idx] == Some(self.turn) {
                 if flipped {
-                    return true
+                    return true;
                 }
                 break;
             } else if self.board[new_idx].is_none() {
@@ -120,7 +120,7 @@ impl MainState {
 
             if self.board[new_idx] == Some(self.turn) {
                 if flipped {
-                    return true
+                    return true;
                 }
                 break;
             } else if self.board[new_idx].is_none() {
@@ -137,7 +137,7 @@ impl MainState {
 
             if self.board[new_idx] == Some(self.turn) {
                 if flipped {
-                    return true
+                    return true;
                 }
                 break;
             } else if self.board[new_idx].is_none() {
@@ -154,7 +154,7 @@ impl MainState {
 
             if self.board[new_idx] == Some(self.turn) {
                 if flipped {
-                    return true
+                    return true;
                 }
                 break;
             } else if self.board[new_idx].is_none() {
@@ -171,7 +171,7 @@ impl MainState {
 
             if self.board[new_idx] == Some(self.turn) {
                 if flipped {
-                    return true
+                    return true;
                 }
                 break;
             } else if self.board[new_idx].is_none() {
@@ -188,7 +188,7 @@ impl MainState {
 
             if self.board[new_idx] == Some(self.turn) {
                 if flipped {
-                    return true
+                    return true;
                 }
                 break;
             } else if self.board[new_idx].is_none() {
@@ -333,7 +333,7 @@ impl MainState {
                 candidates.push(new_idx);
             }
         }
-        
+
         captures
     }
 
@@ -359,7 +359,7 @@ impl MainState {
         for x in 0..crate::RANK {
             for y in 0..crate::RANK {
                 if self.valid_space(x, y) {
-                    return true
+                    return true;
                 }
             }
         }
@@ -368,7 +368,11 @@ impl MainState {
     }
 
     pub fn check_winner(&mut self) -> Winner {
-        let white = self.board.iter().filter(|&x| *x == Some(Piece::White)).count();
+        let white = self
+            .board
+            .iter()
+            .filter(|&x| *x == Some(Piece::White))
+            .count();
         let black = crate::RANK * crate::RANK - white;
 
         if black > white {
