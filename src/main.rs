@@ -1,7 +1,7 @@
-use ggez::{Context, GameResult};
 use ggez::conf;
 use ggez::event::{self, EventHandler, Keycode, Mod, MouseButton};
 use ggez::graphics::{self, Color, DrawMode, Point2, Rect};
+use ggez::{Context, GameResult};
 
 /// The target window size width/height wise.
 const WINDOW_SIZE: f32 = 800.0;
@@ -35,7 +35,7 @@ impl EventHandler for MainState {
 
     fn draw(&mut self, ctx: &mut Context) -> GameResult<()> {
         graphics::clear(ctx);
-        
+
         let mut color_flag = false;
         //  Keep track of which index has the spot with the most captures
         let mut best_spot = None;
@@ -62,9 +62,11 @@ impl EventHandler for MainState {
 
             color_flag = !color_flag;
 
-            graphics::rectangle(ctx,
+            graphics::rectangle(
+                ctx,
                 DrawMode::Fill,
-                Rect::new(col * SPACE_SIZE, row * SPACE_SIZE, SPACE_SIZE, SPACE_SIZE))?;
+                Rect::new(col * SPACE_SIZE, row * SPACE_SIZE, SPACE_SIZE, SPACE_SIZE),
+            )?;
 
             if let Some(p) = piece {
                 if *p == Piece::Black {
@@ -73,23 +75,32 @@ impl EventHandler for MainState {
                     graphics::set_color(ctx, graphics::WHITE)?;
                 }
 
-                graphics::circle(ctx, 
-                    DrawMode::Fill, 
-                    Point2::new(col * SPACE_SIZE + SPACE_SIZE / 2.0, row * SPACE_SIZE + SPACE_SIZE / 2.0),
+                graphics::circle(
+                    ctx,
+                    DrawMode::Fill,
+                    Point2::new(
+                        col * SPACE_SIZE + SPACE_SIZE / 2.0,
+                        row * SPACE_SIZE + SPACE_SIZE / 2.0,
+                    ),
                     RADIUS,
-                    0.0001)?;
+                    0.0001,
+                )?;
             }
         }
 
         graphics::set_color(ctx, Color::from((0, 255, 0)))?;
-        
+
         if let Some(best) = best_spot {
-            graphics::rectangle(ctx,
+            graphics::rectangle(
+                ctx,
                 DrawMode::Fill,
-                Rect::new((best % RANK) as f32 * SPACE_SIZE,
+                Rect::new(
+                    (best % RANK) as f32 * SPACE_SIZE,
                     (best / RANK) as f32 * SPACE_SIZE,
                     SPACE_SIZE,
-                    SPACE_SIZE))?;
+                    SPACE_SIZE,
+                ),
+            )?;
         }
 
         graphics::present(ctx);
